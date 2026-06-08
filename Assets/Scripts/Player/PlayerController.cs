@@ -21,6 +21,8 @@ public class PlayerController : Singleton<PlayerController>
 
     private bool facingLeft = false;
     private bool isDashing = false;
+    private readonly int moveXHash = Animator.StringToHash("MoveX");
+    private readonly int moveYHash = Animator.StringToHash("MoveY");
 
     //private void Awake()
     //{
@@ -39,7 +41,10 @@ public class PlayerController : Singleton<PlayerController>
     {
         playerControls.Combat.Dash.performed += _ => Dash();
         startingMoveSpeed= moveSpeed;
-        ActiveInventory.Instance.EquipStartingWeapon();
+        if (ActiveInventory.Instance != null)
+        {
+            ActiveInventory.Instance.EquipStartingWeapon();
+        }
     }
 
     private void OnEnable()
@@ -68,8 +73,8 @@ public class PlayerController : Singleton<PlayerController>
     {
         movement = playerControls.Movement.Move.ReadValue<Vector2>();
 
-        myAnimator.SetFloat("moveX", movement.x);
-        myAnimator.SetFloat("moveY", movement.y);
+        myAnimator.SetFloat(moveXHash, movement.x);
+        myAnimator.SetFloat(moveYHash, movement.y);
     }
 
     private void Move()

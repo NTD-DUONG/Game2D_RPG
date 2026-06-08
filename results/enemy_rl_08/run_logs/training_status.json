@@ -1,0 +1,29 @@
+{
+    "EnemyTraining": {
+        "checkpoints": [
+            {
+                "steps": 1800,
+                "file_path": "results\\enemy_rl_08\\EnemyTraining\\EnemyTraining-1800.onnx",
+                "reward": -8.762332797050476,
+                "creation_time": 1780908544.9439473,
+                "auxillary_file_paths": [
+                    "results\\enemy_rl_08\\EnemyTraining\\EnemyTraining-1800.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 1800,
+            "file_path": "results\\enemy_rl_08\\EnemyTraining.onnx",
+            "reward": -8.762332797050476,
+            "creation_time": 1780908544.9439473,
+            "auxillary_file_paths": [
+                "results\\enemy_rl_08\\EnemyTraining\\EnemyTraining-1800.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}
