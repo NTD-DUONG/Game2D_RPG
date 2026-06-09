@@ -35,10 +35,21 @@ public class PlayerController : Singleton<PlayerController>
         myAnimator = GetComponent<Animator>();
         mySpriteRender = GetComponent<SpriteRenderer>();
         knockback = GetComponent<Knockback>();
+
+        if (rb != null)
+        {
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        }
     }
 
     private void Start()
     {
+        if (playerControls == null)
+        {
+            return;
+        }
+
         playerControls.Combat.Dash.performed += _ => Dash();
         startingMoveSpeed= moveSpeed;
         if (ActiveInventory.Instance != null)
@@ -49,12 +60,12 @@ public class PlayerController : Singleton<PlayerController>
 
     private void OnEnable()
     {
-        playerControls.Enable();
+        playerControls?.Enable();
     }
 
     private void OnDisable()
     {
-        playerControls.Disable();
+        playerControls?.Disable();
     }
 
 
@@ -71,6 +82,11 @@ public class PlayerController : Singleton<PlayerController>
 
     private void PlayerInput()
     {
+        if (playerControls == null || myAnimator == null)
+        {
+            return;
+        }
+
         movement = playerControls.Movement.Move.ReadValue<Vector2>();
 
         myAnimator.SetFloat(moveXHash, movement.x);
@@ -79,14 +95,20 @@ public class PlayerController : Singleton<PlayerController>
 
     private void Move()
     {
-        if (knockback.GettingKnockedBack ) { return; }
+        if (rb == null || knockback != null && knockback.GettingKnockedBack ) { return; }
         rb.MovePosition(rb.position + movement * (moveSpeed * Time.fixedDeltaTime));
     }
 
     private void AdjustPlayerFacingDirection()
     {
+        Camera activeCamera = Camera.main;
+        if (activeCamera == null)
+        {
+            return;
+        }
+
         Vector3 mousePos = Input.mousePosition;
-        Vector3 playerScreenPoint = Camera.main.WorldToScreenPoint(transform.position);
+        Vector3 playerScreenPoint = activeCamera.WorldToScreenPoint(transform.position);
 
         if (mousePos.x < playerScreenPoint.x)
         {

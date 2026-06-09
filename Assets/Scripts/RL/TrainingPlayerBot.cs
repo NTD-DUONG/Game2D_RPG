@@ -12,7 +12,8 @@ public class TrainingPlayerBot : MonoBehaviour
     [SerializeField] private float directionChangeTime = 1f;
 
     private Vector2 wanderDirection;
-    private Vector2 targetVelocity;
+    private Vector2 targetMoveDirection;
+    private Vector2 currentMoveDirection;
     private float nextAttackTime;
     private float directionTimer;
 
@@ -48,8 +49,8 @@ public class TrainingPlayerBot : MonoBehaviour
         {
             Vector2 awayFromEnemy = ((Vector2)transform.position - (Vector2)enemy.position).normalized;
             Vector2 strafe = new Vector2(-awayFromEnemy.y, awayFromEnemy.x);
-            targetVelocity = (awayFromEnemy * 0.4f + strafe * 0.6f).normalized * moveSpeed;
-            body.linearVelocity = Vector2.MoveTowards(body.linearVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
+            targetMoveDirection = (awayFromEnemy * 0.4f + strafe * 0.6f).normalized;
+            ApplyMovement();
             TryAttack();
             return;
         }
@@ -61,8 +62,19 @@ public class TrainingPlayerBot : MonoBehaviour
             directionTimer = directionChangeTime;
         }
 
-        targetVelocity = wanderDirection * moveSpeed;
-        body.linearVelocity = Vector2.MoveTowards(body.linearVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
+        targetMoveDirection = wanderDirection;
+        ApplyMovement();
+    }
+
+    private void ApplyMovement()
+    {
+        currentMoveDirection = Vector2.MoveTowards(
+            currentMoveDirection,
+            targetMoveDirection,
+            acceleration * Time.fixedDeltaTime
+        );
+
+        body.MovePosition(body.position + currentMoveDirection * (moveSpeed * Time.fixedDeltaTime));
     }
 
     private void TryAttack()

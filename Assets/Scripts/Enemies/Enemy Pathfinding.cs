@@ -9,11 +9,17 @@ public class EnemyPathfinding : MonoBehaviour
     private void Awake()
     {
         knockback = GetComponent<Knockback>();
-        rb = GetComponent<Rigidbody2D>();   
+        rb = GetComponent<Rigidbody2D>();
+
+        if (rb != null)
+        {
+            rb.interpolation = RigidbodyInterpolation2D.Interpolate;
+            rb.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
+        }
     }
     private void FixedUpdate()
     {
-        if (knockback.GettingKnockedBack) { return; }
+        if (rb == null || knockback != null && knockback.GettingKnockedBack) { return; }
         rb.MovePosition(rb.position+moveDir*(moveSpeed*Time.fixedDeltaTime));
     }
     public void MoveTo(Vector2 targetPosition)

@@ -14,6 +14,7 @@ public class EnemyTrainingAgent : Agent
     [SerializeField] private TrainingArenaManager arenaManager;
     [SerializeField] private float moveSpeed = 2.5f;
     [SerializeField] private float acceleration = 18f;
+    [SerializeField] private float directionAcceleration = 12f;
     [SerializeField] private float attackRange = 5f;
     [SerializeField] private float attackCooldown = 0.8f;
     [SerializeField] private float maxObservationDistance = 10f;
@@ -21,7 +22,7 @@ public class EnemyTrainingAgent : Agent
     [SerializeField] private bool enforceMinimumEpisodeTime = true;
     [SerializeField] private float minimumEpisodeTime = 120f;
     [Header("Visual Smoothing")]
-    [SerializeField] private bool pauseAnimatorWhenStill = true;
+    [SerializeField] private bool pauseAnimatorWhenStill = false;
     [SerializeField] private float stillVelocityThreshold = 0.05f;
 
     private float previousDistance;
@@ -29,8 +30,10 @@ public class EnemyTrainingAgent : Agent
     private float episodeTimer;
     private int idleStepCount;
     private bool episodeEnding;
-    private Vector2 targetVelocity;
+    private Vector2 targetMoveDirection;
+    private Vector2 smoothedMoveDirection;
     private Animator agentAnimator;
+    private EnemyPathfinding enemyPathfinding;
 
     public override void Initialize()
     {
@@ -41,6 +44,7 @@ public class EnemyTrainingAgent : Agent
 
         ConfigureBody(body);
         agentAnimator = GetComponent<Animator>();
+        enemyPathfinding = GetComponent<EnemyPathfinding>();
 
         if (enemyHealth == null)
         {
@@ -96,12 +100,15 @@ public class EnemyTrainingAgent : Agent
         episodeTimer = 0f;
         idleStepCount = 0;
         nextAttackTime = 0f;
-        targetVelocity = Vector2.zero;
+        targetMoveDirection = Vector2.zero;
+        smoothedMoveDirection = Vector2.zero;
 
         if (arenaManager != null)
         {
             arenaManager.ResetArena();
         }
+
+        StopMovement();
 
         previousDistance = GetDistanceToPlayer();
     }
@@ -147,7 +154,7 @@ public class EnemyTrainingAgent : Agent
         int action = actions.DiscreteActions[0];
         Vector2 moveDirection = GetMoveDirection(action);
 
-        targetVelocity = moveDirection * moveSpeed;
+        targetMoveDirection = moveDirection;
 
         RewardMovement(moveDirection);
 
@@ -194,19 +201,13 @@ public class EnemyTrainingAgent : Agent
 
     private void FixedUpdate()
     {
-        if (body == null)
-        {
-            return;
-        }
-
         if (episodeEnding)
         {
-            body.linearVelocity = Vector2.MoveTowards(body.linearVelocity, Vector2.zero, acceleration * Time.fixedDeltaTime);
+            StopMovement();
             return;
         }
 
-        body.linearVelocity = Vector2.MoveTowards(body.linearVelocity, targetVelocity, acceleration * Time.fixedDeltaTime);
-        UpdateAnimatorPlayback();
+        ApplyMovement();
     }
 
     private void RewardMovement(Vector2 moveDirection)
@@ -338,6 +339,7 @@ public class EnemyTrainingAgent : Agent
         }
 
         episodeEnding = true;
+        StopMovement();
         EndEpisode();
     }
 
@@ -348,6 +350,8 @@ public class EnemyTrainingAgent : Agent
 
     private void OnDestroy()
     {
+        StopMovement();
+
         if (enemyHealth != null)
         {
             enemyHealth.Damaged -= OnEnemyDamaged;
@@ -382,13 +386,70 @@ public class EnemyTrainingAgent : Agent
         targetBody.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
     }
 
+    private void ApplyMovement()
+    {
+        smoothedMoveDirection = Vector2.MoveTowards(
+            smoothedMoveDirection,
+            targetMoveDirection,
+            directionAcceleration * Time.fixedDeltaTime
+        );
+
+        if (smoothedMoveDirection.sqrMagnitude < 0.001f)
+        {
+            StopMovement();
+            UpdateAnimatorPlayback(false);
+            return;
+        }
+
+        Vector2 moveDirection = Vector2.ClampMagnitude(smoothedMoveDirection, 1f);
+
+        if (enemyPathfinding != null)
+        {
+            enemyPathfinding.MoveTo(moveDirection);
+        }
+        else if (body != null)
+        {
+            body.linearVelocity = Vector2.MoveTowards(
+                body.linearVelocity,
+                moveDirection * moveSpeed,
+                acceleration * Time.fixedDeltaTime
+            );
+        }
+
+        UpdateAnimatorPlayback(true);
+    }
+
+    private void StopMovement()
+    {
+        targetMoveDirection = Vector2.zero;
+        smoothedMoveDirection = Vector2.zero;
+
+        if (enemyPathfinding != null)
+        {
+            enemyPathfinding.StopMoving();
+        }
+
+        if (body != null)
+        {
+            body.linearVelocity = Vector2.MoveTowards(body.linearVelocity, Vector2.zero, acceleration * Time.fixedDeltaTime);
+        }
+    }
+
     private void UpdateAnimatorPlayback()
     {
-        if (!pauseAnimatorWhenStill || agentAnimator == null || body == null)
+        bool isMoving = body != null && body.linearVelocity.sqrMagnitude > stillVelocityThreshold * stillVelocityThreshold
+            || smoothedMoveDirection.sqrMagnitude > stillVelocityThreshold * stillVelocityThreshold;
+
+        UpdateAnimatorPlayback(isMoving);
+    }
+
+    private void UpdateAnimatorPlayback(bool isMoving)
+    {
+        if (!pauseAnimatorWhenStill || agentAnimator == null)
         {
             return;
         }
 
-        agentAnimator.speed = body.linearVelocity.sqrMagnitude > stillVelocityThreshold * stillVelocityThreshold ? 1f : 0f;
+        agentAnimator.speed = isMoving ? 1f : 0f;
     }
 }

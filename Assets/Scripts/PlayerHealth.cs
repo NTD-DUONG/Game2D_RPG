@@ -41,7 +41,7 @@ public class PlayerHealth : MonoBehaviour
     {
         EnemyAI enemy = other.gameObject.GetComponent<EnemyAI>();
 
-        if (enemy)
+        if (enemy != null && enemy.enabled)
         {
             TakeDamage(1, other.transform);
         }
@@ -59,8 +59,16 @@ public class PlayerHealth : MonoBehaviour
     {
         if (!canTakeDamage) {return; }
 
-        knockback.GetKnockedBack(hitTransform, knockBackThrustAmount);
-        StartCoroutine(flash.FlashRoutine());
+        if (knockback != null)
+        {
+            knockback.GetKnockedBack(hitTransform, knockBackThrustAmount);
+        }
+
+        if (flash != null)
+        {
+            StartCoroutine(flash.FlashRoutine());
+        }
+
         canTakeDamage = false;
         currentHealth -= damageAmount;
         StartCoroutine(DamageRecoveryRoutine());
@@ -95,7 +103,17 @@ public class PlayerHealth : MonoBehaviour
     {
         if (healthSlider == null)
         {
-            healthSlider = GameObject.Find("Health Slider").GetComponent<Slider>();
+            GameObject sliderObject = GameObject.Find(HEALTH_SLIDER_TEXT);
+            if (sliderObject == null)
+            {
+                return;
+            }
+
+            healthSlider = sliderObject.GetComponent<Slider>();
+            if (healthSlider == null)
+            {
+                return;
+            }
         }
 
         healthSlider.maxValue = maxHealth;

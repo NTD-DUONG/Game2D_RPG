@@ -824,6 +824,10 @@ MonoBehaviour:
   arenaSize: {x: 8, y: 5}
   randomizeSpawn: 1
   minimumSpawnDistance: 2
+  disablePlayerInputOnPlay: 0
+  disablePlayerWeaponOnPlay: 1
+  disablePlayerBotOnPlay: 1
+  forcePlayerIdleAnimation: 1
 --- !u!4 &337937169
 Transform:
   m_ObjectHideFlags: 0
@@ -8969,7 +8973,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3a5c9d521e5ef4759a8246a07d52221e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  DecisionPeriod: 5
+  DecisionPeriod: 1
   DecisionStep: 0
   TakeActionsBetweenDecisions: 1
 --- !u!114 &1506679894
@@ -8996,10 +9000,16 @@ MonoBehaviour:
   rangedAttack: {fileID: 1506679892}
   arenaManager: {fileID: 337937168}
   moveSpeed: 2.5
+  acceleration: 18
+  directionAcceleration: 12
   attackRange: 5
   attackCooldown: 0.8
   maxObservationDistance: 10
   maxEpisodeTime: 30
+  enforceMinimumEpisodeTime: 1
+  minimumEpisodeTime: 120
+  pauseAnimatorWhenStill: 0
+  stillVelocityThreshold: 0.05
 --- !u!114 &1506679895
 MonoBehaviour:
   m_ObjectHideFlags: 0
