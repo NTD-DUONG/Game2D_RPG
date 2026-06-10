@@ -9,6 +9,7 @@ public class Shooter : MonoBehaviour,IEnemy
     [SerializeField] private int burstCount;
     [SerializeField] private float timeBetweenBursts;
     [SerializeField] private float restTime = 1f;
+    [SerializeField] private float projectileSpawnOffset = 0.7f;
 
     private bool isShooting = false;
 
@@ -26,14 +27,23 @@ public class Shooter : MonoBehaviour,IEnemy
 
         for (int i = 0; i < burstCount; i++)
         {
-            Vector2 targetDirection = PlayerController.Instance.transform.position - transform.position;
+            if (PlayerController.Instance == null)
+            {
+                yield break;
+            }
 
-            GameObject newBullet = Instantiate(bulletPrefab, transform.position, Quaternion.identity);
-            newBullet.transform.right = targetDirection;
+            Vector2 targetDirection = PlayerController.Instance.transform.position - transform.position;
+            Vector2 shootDirection = targetDirection.sqrMagnitude > 0.001f ? targetDirection.normalized : transform.right;
+            Vector3 spawnPosition = transform.position + (Vector3)(shootDirection * projectileSpawnOffset);
+
+            GameObject newBullet = Instantiate(bulletPrefab, spawnPosition, Quaternion.identity);
+            newBullet.transform.right = shootDirection;
 
             if (newBullet.TryGetComponent(out Projectile projectile))
             {
                 projectile.UpdateMoveSpeed(bulletMoveSpeed);
+                projectile.IgnoreCollisionWith(gameObject);
+                projectile.EnableRuntimeEnemyProjectileVisual();
             }
 
             yield return new WaitForSeconds(timeBetweenBursts);

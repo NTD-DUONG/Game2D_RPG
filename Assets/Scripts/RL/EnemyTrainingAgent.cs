@@ -1,5 +1,6 @@
 using Unity.MLAgents;
 using Unity.MLAgents.Actuators;
+using Unity.MLAgents.Policies;
 using Unity.MLAgents.Sensors;
 using UnityEngine;
 
@@ -18,12 +19,23 @@ public class EnemyTrainingAgent : Agent
     [SerializeField] private float attackRange = 5f;
     [SerializeField] private float attackCooldown = 0.8f;
     [SerializeField] private float maxObservationDistance = 10f;
+    [Header("Obstacle Awareness")]
+    [SerializeField] private float obstacleRayDistance = 3f;
+    [SerializeField] private LayerMask obstacleMask = ~0;
+    [SerializeField] private float obstacleHitPenalty = -0.015f;
+    [SerializeField] private float stuckPenalty = -0.02f;
+    [SerializeField] private float minMovementDelta = 0.005f;
     [SerializeField] private float maxEpisodeTime = 120f;
     [SerializeField] private bool enforceMinimumEpisodeTime = true;
     [SerializeField] private float minimumEpisodeTime = 120f;
     [Header("Visual Smoothing")]
     [SerializeField] private bool pauseAnimatorWhenStill = false;
     [SerializeField] private float stillVelocityThreshold = 0.05f;
+    [Header("Inference Tuning")]
+    [SerializeField] private bool useInferenceAssist = true;
+    [SerializeField] private float inferenceMoveSpeed = 3.2f;
+    [SerializeField] private float inferenceAssistDistance = 1.5f;
+    [SerializeField] private float inferenceAssistBlend = 0.35f;
 
     private float previousDistance;
     private float nextAttackTime;
@@ -32,8 +44,22 @@ public class EnemyTrainingAgent : Agent
     private bool episodeEnding;
     private Vector2 targetMoveDirection;
     private Vector2 smoothedMoveDirection;
+    private Vector2 previousStepPosition;
     private Animator agentAnimator;
     private EnemyPathfinding enemyPathfinding;
+    private BehaviorParameters behaviorParameters;
+
+    private static readonly Vector2[] ObstacleRayDirections =
+    {
+        Vector2.up,
+        new(1f, 1f),
+        Vector2.right,
+        new(1f, -1f),
+        Vector2.down,
+        new(-1f, -1f),
+        Vector2.left,
+        new(-1f, 1f)
+    };
 
     public override void Initialize()
     {
@@ -45,6 +71,12 @@ public class EnemyTrainingAgent : Agent
         ConfigureBody(body);
         agentAnimator = GetComponent<Animator>();
         enemyPathfinding = GetComponent<EnemyPathfinding>();
+        behaviorParameters = GetComponent<BehaviorParameters>();
+
+        if (IsInferenceOnly() && enemyPathfinding != null && inferenceMoveSpeed > 0f)
+        {
+            enemyPathfinding.MoveSpeed = inferenceMoveSpeed;
+        }
 
         if (enemyHealth == null)
         {
@@ -111,17 +143,14 @@ public class EnemyTrainingAgent : Agent
         StopMovement();
 
         previousDistance = GetDistanceToPlayer();
+        previousStepPosition = transform.position;
     }
 
     public override void CollectObservations(VectorSensor sensor)
     {
         if (player == null || playerHealth == null || enemyHealth == null)
         {
-            sensor.AddObservation(Vector2.zero);
-            sensor.AddObservation(0f);
-            sensor.AddObservation(0f);
-            sensor.AddObservation(0f);
-            sensor.AddObservation(0f);
+            AddEmptyObservations(sensor);
             return;
         }
 
@@ -134,6 +163,7 @@ public class EnemyTrainingAgent : Agent
         sensor.AddObservation(playerHealth.Health01);
         sensor.AddObservation(enemyHealth.Health01);
         sensor.AddObservation(Time.time >= nextAttackTime ? 1f : 0f);
+        AddObstacleObservations(sensor);
     }
 
     public override void OnActionReceived(ActionBuffers actions)
@@ -154,11 +184,11 @@ public class EnemyTrainingAgent : Agent
         int action = actions.DiscreteActions[0];
         Vector2 moveDirection = GetMoveDirection(action);
 
-        targetMoveDirection = moveDirection;
+        targetMoveDirection = GetInferenceAssistedMoveDirection(moveDirection);
 
         RewardMovement(moveDirection);
 
-        if (action == 5)
+        if (action == 9)
         {
             TryAttack();
         }
@@ -173,18 +203,11 @@ public class EnemyTrainingAgent : Agent
 
         if (toPlayer.magnitude <= attackRange && Time.time >= nextAttackTime)
         {
-            discreteActions[0] = 5;
+            discreteActions[0] = 9;
             return;
         }
 
-        if (Mathf.Abs(toPlayer.x) > Mathf.Abs(toPlayer.y))
-        {
-            discreteActions[0] = toPlayer.x > 0f ? 4 : 3;
-        }
-        else
-        {
-            discreteActions[0] = toPlayer.y > 0f ? 1 : 2;
-        }
+        discreteActions[0] = GetClosestMoveAction(toPlayer);
     }
 
     private Vector2 GetMoveDirection(int action)
@@ -195,6 +218,10 @@ public class EnemyTrainingAgent : Agent
             2 => Vector2.down,
             3 => Vector2.left,
             4 => Vector2.right,
+            5 => new Vector2(-1f, 1f).normalized,
+            6 => new Vector2(1f, 1f).normalized,
+            7 => new Vector2(-1f, -1f).normalized,
+            8 => new Vector2(1f, -1f).normalized,
             _ => Vector2.zero
         };
     }
@@ -214,6 +241,7 @@ public class EnemyTrainingAgent : Agent
     {
         float currentDistance = GetDistanceToPlayer();
         float distanceDelta = previousDistance - currentDistance;
+        float movementDelta = Vector2.Distance(transform.position, previousStepPosition);
 
         if (moveDirection == Vector2.zero)
         {
@@ -226,6 +254,16 @@ public class EnemyTrainingAgent : Agent
         else
         {
             idleStepCount = 0;
+
+            if (movementDelta < minMovementDelta)
+            {
+                AddReward(stuckPenalty);
+            }
+
+            if (IsObstacleInDirection(moveDirection))
+            {
+                AddReward(obstacleHitPenalty);
+            }
         }
 
         if (currentDistance > attackRange && distanceDelta > 0f)
@@ -238,6 +276,7 @@ public class EnemyTrainingAgent : Agent
         }
 
         previousDistance = currentDistance;
+        previousStepPosition = transform.position;
     }
 
     private void TryAttack()
@@ -314,6 +353,113 @@ public class EnemyTrainingAgent : Agent
         }
 
         return Vector2.Distance(transform.position, player.position);
+    }
+
+    private void AddEmptyObservations(VectorSensor sensor)
+    {
+        sensor.AddObservation(Vector2.zero);
+        sensor.AddObservation(0f);
+        sensor.AddObservation(0f);
+        sensor.AddObservation(0f);
+        sensor.AddObservation(0f);
+        sensor.AddObservation(0f);
+
+        for (int i = 0; i < ObstacleRayDirections.Length; i++)
+        {
+            sensor.AddObservation(0f);
+            sensor.AddObservation(1f);
+        }
+    }
+
+    private void AddObstacleObservations(VectorSensor sensor)
+    {
+        foreach (Vector2 direction in ObstacleRayDirections)
+        {
+            float normalizedDistance = GetObstacleDistance01(direction.normalized, out bool hasObstacle);
+            sensor.AddObservation(hasObstacle ? 1f : 0f);
+            sensor.AddObservation(normalizedDistance);
+        }
+    }
+
+    private bool IsObstacleInDirection(Vector2 direction)
+    {
+        if (direction.sqrMagnitude < 0.001f)
+        {
+            return false;
+        }
+
+        GetObstacleDistance01(direction.normalized, out bool hasObstacle);
+        return hasObstacle;
+    }
+
+    private float GetObstacleDistance01(Vector2 direction, out bool hasObstacle)
+    {
+        hasObstacle = false;
+
+        if (obstacleRayDistance <= 0f)
+        {
+            return 1f;
+        }
+
+        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, direction, obstacleRayDistance, obstacleMask);
+        float closestDistance = obstacleRayDistance;
+
+        foreach (RaycastHit2D hit in hits)
+        {
+            if (hit.collider == null || hit.collider.isTrigger || ShouldIgnoreObstacleHit(hit.collider))
+            {
+                continue;
+            }
+
+            hasObstacle = true;
+            closestDistance = Mathf.Min(closestDistance, hit.distance);
+        }
+
+        return Mathf.Clamp01(closestDistance / obstacleRayDistance);
+    }
+
+    private bool ShouldIgnoreObstacleHit(Collider2D hitCollider)
+    {
+        Transform hitTransform = hitCollider.transform;
+
+        if (hitTransform == transform || hitTransform.IsChildOf(transform))
+        {
+            return true;
+        }
+
+        if (player != null && (hitTransform == player || hitTransform.IsChildOf(player)))
+        {
+            return true;
+        }
+
+        return hitCollider.GetComponent<TrainingHealth>() != null
+            || hitCollider.GetComponent<PlayerHealth>() != null
+            || hitCollider.GetComponent<EnemyHealthy>() != null
+            || hitCollider.GetComponent<Projectile>() != null;
+    }
+
+    private int GetClosestMoveAction(Vector2 direction)
+    {
+        if (direction.sqrMagnitude < 0.001f)
+        {
+            return 0;
+        }
+
+        Vector2 normalizedDirection = direction.normalized;
+        int bestAction = 0;
+        float bestDot = float.NegativeInfinity;
+
+        for (int action = 1; action <= 8; action++)
+        {
+            float dot = Vector2.Dot(normalizedDirection, GetMoveDirection(action));
+            if (dot > bestDot)
+            {
+                bestDot = dot;
+                bestAction = action;
+            }
+        }
+
+        return bestAction;
     }
 
     private void AimAtPlayer()
@@ -417,6 +563,36 @@ public class EnemyTrainingAgent : Agent
         }
 
         UpdateAnimatorPlayback(true);
+    }
+
+    private Vector2 GetInferenceAssistedMoveDirection(Vector2 policyMoveDirection)
+    {
+        if (!useInferenceAssist || !IsInferenceOnly() || player == null)
+        {
+            return policyMoveDirection;
+        }
+
+        Vector2 toPlayer = player.position - transform.position;
+        if (toPlayer.magnitude <= inferenceAssistDistance)
+        {
+            return policyMoveDirection;
+        }
+
+        Vector2 approachDirection = toPlayer.normalized;
+        if (policyMoveDirection.sqrMagnitude < 0.001f)
+        {
+            return approachDirection;
+        }
+
+        return Vector2.ClampMagnitude(
+            Vector2.Lerp(policyMoveDirection.normalized, approachDirection, inferenceAssistBlend),
+            1f
+        );
+    }
+
+    private bool IsInferenceOnly()
+    {
+        return behaviorParameters != null && behaviorParameters.BehaviorType == BehaviorType.InferenceOnly;
     }
 
     private void StopMovement()

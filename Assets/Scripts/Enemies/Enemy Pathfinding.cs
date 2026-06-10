@@ -6,6 +6,13 @@ public class EnemyPathfinding : MonoBehaviour
     private Rigidbody2D rb;
     private Vector2 moveDir;
     private Knockback knockback;
+
+    public float MoveSpeed
+    {
+        get { return moveSpeed; }
+        set { moveSpeed = value; }
+    }
+
     private void Awake()
     {
         knockback = GetComponent<Knockback>();

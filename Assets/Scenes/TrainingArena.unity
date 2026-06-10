@@ -8961,6 +8961,12 @@ MonoBehaviour:
   bulletMoveSpeed: 4
   projectileRange: 10
   damageAmount: 1
+  spawnedProjectileScale: 1
+  spawnedProjectileColor: {r: 0.1, g: 0.9, b: 1, a: 1}
+  spawnedProjectileSortingOrder: 50
+  addProjectileTrail: 0
+  trailTime: 0.25
+  trailWidth: 0.16
 --- !u!114 &1506679893
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9005,11 +9011,22 @@ MonoBehaviour:
   attackRange: 5
   attackCooldown: 0.8
   maxObservationDistance: 10
+  obstacleRayDistance: 3
+  obstacleMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  obstacleHitPenalty: -0.015
+  stuckPenalty: -0.02
+  minMovementDelta: 0.005
   maxEpisodeTime: 30
   enforceMinimumEpisodeTime: 1
   minimumEpisodeTime: 120
   pauseAnimatorWhenStill: 0
   stillVelocityThreshold: 0.05
+  useInferenceAssist: 1
+  inferenceMoveSpeed: 3.2
+  inferenceAssistDistance: 1.5
+  inferenceAssistBlend: 0.35
 --- !u!114 &1506679895
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -9023,12 +9040,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 6
+    VectorObservationSize: 22
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 0
-      BranchSizes: 06000000
-    VectorActionSize: 06000000
+      BranchSizes: 0a000000
+    VectorActionSize: 0a000000
     VectorActionDescriptions: []
     VectorActionSpaceType: 0
     hasUpgradedBrainParametersWithActionSpec: 1
@@ -13692,7 +13709,6 @@ GameObject:
   m_Component:
   - component: {fileID: 2045303128}
   - component: {fileID: 2045303127}
-  - component: {fileID: 2045303129}
   - component: {fileID: 2045303130}
   - component: {fileID: 2045303126}
   - component: {fileID: 2045303132}
@@ -13810,18 +13826,6 @@ Transform:
   - {fileID: 343753225}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &2045303129
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2045303125}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b8ff674eec60fea45b186e8d5a311cf0, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &2045303130
 MonoBehaviour:
   m_ObjectHideFlags: 0

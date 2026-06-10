@@ -188,4 +188,5 @@ public class TrainingArenaManager : MonoBehaviour
         playerAnimator.Play(playerIdleHash, 0, 0f);
         playerAnimator.Update(0f);
     }
+
 }
