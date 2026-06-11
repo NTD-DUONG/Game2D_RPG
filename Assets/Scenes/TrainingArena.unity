@@ -9080,6 +9080,9 @@ MonoBehaviour:
   playKnockback: 1
   knockbackThrustAmount: 6
   playDeathAnimation: 0
+  deathVFXPrefab: {fileID: 2591053067429677938, guid: 9c872164e48e35743990c914b68462f0, type: 3}
+  deathVFXSortingOrder: 100
+  hideRenderersOnDeath: 1
   disableControlsOnDeath: 0
 --- !u!1 &1531114283
 GameObject:
@@ -14004,6 +14007,9 @@ MonoBehaviour:
   playKnockback: 1
   knockbackThrustAmount: 10
   playDeathAnimation: 1
+  deathVFXPrefab: {fileID: 0}
+  deathVFXSortingOrder: 80
+  hideRenderersOnDeath: 0
   disableControlsOnDeath: 1
 --- !u!4 &2058417683 stripped
 Transform:

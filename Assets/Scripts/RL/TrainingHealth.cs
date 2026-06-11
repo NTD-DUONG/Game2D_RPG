@@ -11,6 +11,9 @@ public class TrainingHealth : MonoBehaviour
     [SerializeField] private bool playKnockback = true;
     [SerializeField] private float knockbackThrustAmount = 10f;
     [SerializeField] private bool playDeathAnimation = true;
+    [SerializeField] private GameObject deathVFXPrefab;
+    [SerializeField] private int deathVFXSortingOrder = 80;
+    [SerializeField] private bool hideRenderersOnDeath;
     [SerializeField] private bool disableControlsOnDeath;
 
     public event Action<TrainingHealth, int, GameObject> Damaged;
@@ -30,6 +33,8 @@ public class TrainingHealth : MonoBehaviour
     private Knockback knockback;
     private Animator animator;
     private Rigidbody2D body;
+    private SpriteRenderer[] spriteRenderers;
+    private Collider2D[] colliders;
 
     private void Awake()
     {
@@ -37,6 +42,8 @@ public class TrainingHealth : MonoBehaviour
         knockback = GetComponent<Knockback>();
         animator = GetComponent<Animator>();
         body = GetComponent<Rigidbody2D>();
+        spriteRenderers = GetComponentsInChildren<SpriteRenderer>(true);
+        colliders = GetComponentsInChildren<Collider2D>(true);
         ResetHealth();
     }
 
@@ -46,6 +53,7 @@ public class TrainingHealth : MonoBehaviour
         CurrentHealth = maxHealth;
         lastDamageTime = -1f;
         ResetFeedbackState();
+        SetDeathHidden(false);
         SetControlsEnabled(true);
         UpdateHealthSlider();
     }
@@ -88,6 +96,12 @@ public class TrainingHealth : MonoBehaviour
 
     private void PlayDeathFeedback()
     {
+        if (deathVFXPrefab != null)
+        {
+            GameObject deathVFX = Instantiate(deathVFXPrefab, transform.position, Quaternion.identity);
+            ConfigureDeathVFX(deathVFX);
+        }
+
         if (playDeathAnimation && animator != null)
         {
             animator.SetTrigger(deathHash);
@@ -96,6 +110,50 @@ public class TrainingHealth : MonoBehaviour
         if (disableControlsOnDeath)
         {
             SetControlsEnabled(false);
+        }
+
+        SetDeathHidden(true);
+    }
+
+    private void ConfigureDeathVFX(GameObject deathVFX)
+    {
+        if (deathVFX == null)
+        {
+            return;
+        }
+
+        foreach (ParticleSystem particleSystem in deathVFX.GetComponentsInChildren<ParticleSystem>(true))
+        {
+            particleSystem.Play(true);
+        }
+
+        foreach (ParticleSystemRenderer particleRenderer in deathVFX.GetComponentsInChildren<ParticleSystemRenderer>(true))
+        {
+            particleRenderer.sortingOrder = deathVFXSortingOrder;
+        }
+    }
+
+    private void SetDeathHidden(bool isHidden)
+    {
+        if (!hideRenderersOnDeath)
+        {
+            return;
+        }
+
+        foreach (SpriteRenderer spriteRenderer in spriteRenderers)
+        {
+            if (spriteRenderer != null)
+            {
+                spriteRenderer.enabled = !isHidden;
+            }
+        }
+
+        foreach (Collider2D collider in colliders)
+        {
+            if (collider != null)
+            {
+                collider.enabled = !isHidden;
+            }
         }
     }
 
