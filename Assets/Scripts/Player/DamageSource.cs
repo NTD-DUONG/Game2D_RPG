@@ -1,23 +1,36 @@
-﻿using UnityEngine;
-using System.Collections;
 using System.Collections.Generic;
+using UnityEngine;
 
 public class DamageSource : MonoBehaviour
 {
-    [SerializeField] private int damageAmount = 1; // Khai báo biến damageAmount
-    private void OnTriggerEnter2D(Collider2D other)
-    {
-        if (other.gameObject.GetComponent<EnemyHealthy>())
-        {
-            EnemyHealthy enemyHealth = other.gameObject.GetComponent<EnemyHealthy>();
-            enemyHealth?.TakeDamage(damageAmount);
-        }
+    [SerializeField] private int damageAmount = 1;
 
-        if (other.gameObject.GetComponent<TrainingHealth>())
-        {
-            TrainingHealth trainingHealth = other.gameObject.GetComponent<TrainingHealth>();
-            trainingHealth?.TakeDamage(damageAmount, gameObject);
-        }
+    private readonly HashSet<GameObject> damagedTargets = new();
+
+    private void OnEnable()
+    {
+        damagedTargets.Clear();
     }
 
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        GameObject target = other.attachedRigidbody != null ? other.attachedRigidbody.gameObject : other.gameObject;
+        if (!damagedTargets.Add(target))
+        {
+            return;
+        }
+
+        TrainingHealth trainingHealth = other.GetComponentInParent<TrainingHealth>();
+        if (trainingHealth != null)
+        {
+            trainingHealth.TakeDamage(damageAmount, gameObject);
+            return;
+        }
+
+        EnemyHealthy enemyHealth = other.GetComponentInParent<EnemyHealthy>();
+        if (enemyHealth != null)
+        {
+            enemyHealth.TakeDamage(damageAmount);
+        }
+    }
 }

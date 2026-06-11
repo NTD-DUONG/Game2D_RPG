@@ -16,9 +16,11 @@ public class EnemyTrainingAgent : Agent
     [SerializeField] private float moveSpeed = 2.5f;
     [SerializeField] private float acceleration = 18f;
     [SerializeField] private float directionAcceleration = 12f;
-    [SerializeField] private float attackRange = 5f;
-    [SerializeField] private float attackCooldown = 0.8f;
+    [SerializeField] private float attackRange = 4f;
+    [SerializeField] private float attackCooldown = 1.2f;
     [SerializeField] private float maxObservationDistance = 10f;
+    [SerializeField] private bool endEpisodeWhenPlayerDies = true;
+    [SerializeField] private bool requireClearShotForAttack = false;
     [Header("Obstacle Awareness")]
     [SerializeField] private float obstacleRayDistance = 3f;
     [SerializeField] private LayerMask obstacleMask = ~0;
@@ -163,6 +165,8 @@ public class EnemyTrainingAgent : Agent
         sensor.AddObservation(playerHealth.Health01);
         sensor.AddObservation(enemyHealth.Health01);
         sensor.AddObservation(Time.time >= nextAttackTime ? 1f : 0f);
+        sensor.AddObservation(distance <= attackRange ? 1f : 0f);
+        sensor.AddObservation(HasClearShotToPlayer(distance) ? 1f : 0f);
         AddObstacleObservations(sensor);
     }
 
@@ -174,7 +178,14 @@ public class EnemyTrainingAgent : Agent
         }
 
         episodeTimer += Time.fixedDeltaTime;
-        if (episodeTimer >= GetEpisodeTimeLimit())
+        if (UsesTrainingEpisodeReset() && IsParticipantOutsideArena())
+        {
+            AddReward(-0.5f);
+            EndTrainingEpisode();
+            return;
+        }
+
+        if (UsesTrainingEpisodeReset() && episodeTimer >= GetEpisodeTimeLimit())
         {
             AddReward(-0.5f);
             EndTrainingEpisode();
@@ -201,13 +212,30 @@ public class EnemyTrainingAgent : Agent
         ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
         Vector2 toPlayer = player.position - transform.position;
 
-        if (toPlayer.magnitude <= attackRange && Time.time >= nextAttackTime)
+        float distanceToPlayer = toPlayer.magnitude;
+        if (distanceToPlayer <= attackRange && Time.time >= nextAttackTime && CanAttackPlayer(distanceToPlayer))
         {
             discreteActions[0] = 9;
             return;
         }
 
         discreteActions[0] = GetClosestMoveAction(toPlayer);
+    }
+
+    public override void WriteDiscreteActionMask(IDiscreteActionMask actionMask)
+    {
+        if (player == null)
+        {
+            actionMask.SetActionEnabled(0, 9, false);
+            return;
+        }
+
+        float distanceToPlayer = GetDistanceToPlayer();
+        bool canAttack = distanceToPlayer <= attackRange
+            && Time.time >= nextAttackTime
+            && CanAttackPlayer(distanceToPlayer);
+
+        actionMask.SetActionEnabled(0, 9, canAttack);
     }
 
     private Vector2 GetMoveDirection(int action)
@@ -248,7 +276,7 @@ public class EnemyTrainingAgent : Agent
             idleStepCount++;
             if (idleStepCount > 10)
             {
-                AddReward(-0.02f);
+                AddReward(currentDistance > attackRange ? -0.04f : -0.02f);
             }
         }
         else
@@ -268,11 +296,11 @@ public class EnemyTrainingAgent : Agent
 
         if (currentDistance > attackRange && distanceDelta > 0f)
         {
-            AddReward(0.02f);
+            AddReward(0.04f);
         }
         else if (currentDistance > attackRange && distanceDelta < -0.01f)
         {
-            AddReward(-0.01f);
+            AddReward(-0.03f);
         }
 
         previousDistance = currentDistance;
@@ -285,17 +313,24 @@ public class EnemyTrainingAgent : Agent
 
         if (Time.time < nextAttackTime)
         {
-            AddReward(-0.02f);
+            AddReward(-0.01f);
+            return;
+        }
+
+        if (distanceToPlayer > attackRange)
+        {
+            AddReward(-0.03f);
+            return;
+        }
+
+        if (!CanAttackPlayer(distanceToPlayer))
+        {
+            AddReward(-0.03f);
             return;
         }
 
         nextAttackTime = Time.time + attackCooldown;
         AimAtPlayer();
-
-        if (distanceToPlayer > attackRange)
-        {
-            AddReward(-0.05f);
-        }
 
         if (rangedAttack != null)
         {
@@ -311,7 +346,7 @@ public class EnemyTrainingAgent : Agent
     {
         if (target == playerHealth)
         {
-            AddReward(0.5f);
+            AddReward(1f);
         }
     }
 
@@ -319,13 +354,13 @@ public class EnemyTrainingAgent : Agent
     {
         if (target == playerHealth)
         {
-            AddReward(0.5f);
+            AddReward(1f);
         }
     }
 
     private void OnRangedAttackMissed()
     {
-        AddReward(-0.05f);
+        AddReward(-0.15f);
     }
 
     private void OnEnemyDamaged(TrainingHealth target, int damageAmount, GameObject source)
@@ -336,6 +371,13 @@ public class EnemyTrainingAgent : Agent
     private void OnPlayerDied(TrainingHealth target)
     {
         AddReward(5f);
+        if (!endEpisodeWhenPlayerDies || IsInferenceOnly())
+        {
+            episodeEnding = true;
+            StopMovement();
+            return;
+        }
+
         EndTrainingEpisode();
     }
 
@@ -358,6 +400,8 @@ public class EnemyTrainingAgent : Agent
     private void AddEmptyObservations(VectorSensor sensor)
     {
         sensor.AddObservation(Vector2.zero);
+        sensor.AddObservation(0f);
+        sensor.AddObservation(0f);
         sensor.AddObservation(0f);
         sensor.AddObservation(0f);
         sensor.AddObservation(0f);
@@ -390,6 +434,39 @@ public class EnemyTrainingAgent : Agent
 
         GetObstacleDistance01(direction.normalized, out bool hasObstacle);
         return hasObstacle;
+    }
+
+    private bool HasClearShotToPlayer(float distanceToPlayer)
+    {
+        if (player == null)
+        {
+            return false;
+        }
+
+        if (distanceToPlayer <= 0.001f)
+        {
+            return true;
+        }
+
+        Vector2 direction = ((Vector2)player.position - (Vector2)transform.position).normalized;
+        RaycastHit2D[] hits = Physics2D.RaycastAll(transform.position, direction, distanceToPlayer, obstacleMask);
+
+        foreach (RaycastHit2D hit in hits)
+        {
+            if (hit.collider == null || hit.collider.isTrigger || ShouldIgnoreObstacleHit(hit.collider))
+            {
+                continue;
+            }
+
+            return false;
+        }
+
+        return true;
+    }
+
+    private bool CanAttackPlayer(float distanceToPlayer)
+    {
+        return !requireClearShotForAttack || HasClearShotToPlayer(distanceToPlayer);
     }
 
     private float GetObstacleDistance01(Vector2 direction, out bool hasObstacle)
@@ -486,12 +563,35 @@ public class EnemyTrainingAgent : Agent
 
         episodeEnding = true;
         StopMovement();
+
+        if (!UsesTrainingEpisodeReset())
+        {
+            return;
+        }
+
         EndEpisode();
     }
 
     private float GetEpisodeTimeLimit()
     {
         return enforceMinimumEpisodeTime ? Mathf.Max(maxEpisodeTime, minimumEpisodeTime) : maxEpisodeTime;
+    }
+
+    private bool IsParticipantOutsideArena()
+    {
+        if (arenaManager == null)
+        {
+            return false;
+        }
+
+        bool enemyOutside = arenaManager.IsOutsideArena(transform.position);
+        bool playerOutside = player != null && arenaManager.IsOutsideArena(player.position);
+        return enemyOutside || playerOutside;
+    }
+
+    private bool UsesTrainingEpisodeReset()
+    {
+        return arenaManager != null && arenaManager.UsesTrainingEpisodeReset;
     }
 
     private void OnDestroy()

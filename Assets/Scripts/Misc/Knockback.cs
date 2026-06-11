@@ -30,4 +30,16 @@ public class Knockback : MonoBehaviour
         GettingKnockedBack = false;
     }
 
+    public void CancelKnockback()
+    {
+        StopAllCoroutines();
+        GettingKnockedBack = false;
+
+        if (rb != null)
+        {
+            rb.linearVelocity = Vector2.zero;
+            rb.angularVelocity = 0f;
+        }
+    }
+
 }

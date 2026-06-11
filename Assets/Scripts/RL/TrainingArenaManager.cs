@@ -20,6 +20,7 @@ public class TrainingArenaManager : MonoBehaviour
     private readonly int moveXHash = Animator.StringToHash("MoveX");
     private readonly int moveYHash = Animator.StringToHash("MoveY");
     private readonly int playerIdleHash = Animator.StringToHash("Idie");
+    public bool UsesTrainingEpisodeReset => disablePlayerInputOnPlay && !disablePlayerBotOnPlay;
 
     private void Awake()
     {
@@ -35,11 +36,16 @@ public class TrainingArenaManager : MonoBehaviour
 
     public void ResetArena()
     {
+        if (!UsesTrainingEpisodeReset)
+        {
+            return;
+        }
+
         TrainingProjectileDamage.ClearAll();
-        ApplyTrainingPlayerSetup();
 
         playerHealth?.ResetHealth();
         enemyHealth?.ResetHealth();
+        ApplyTrainingPlayerSetup();
 
         if (player == null || enemy == null)
         {
@@ -55,6 +61,18 @@ public class TrainingArenaManager : MonoBehaviour
 
         StopBody(playerRigidbody);
         StopBody(enemyRigidbody);
+    }
+
+    public bool IsOutsideArena(Vector2 position, float margin = 0.2f)
+    {
+        Vector2 center = transform.position;
+        float halfWidth = arenaSize.x * 0.5f + margin;
+        float halfHeight = arenaSize.y * 0.5f + margin;
+
+        return position.x < center.x - halfWidth
+            || position.x > center.x + halfWidth
+            || position.y < center.y - halfHeight
+            || position.y > center.y + halfHeight;
     }
 
     private void GetSpawnPositions(out Vector2 playerPosition, out Vector2 enemyPosition)
@@ -83,6 +101,18 @@ public class TrainingArenaManager : MonoBehaviour
         return new Vector2(
             center.x + Random.Range(-arenaSize.x * 0.5f, arenaSize.x * 0.5f),
             center.y + Random.Range(-arenaSize.y * 0.5f, arenaSize.y * 0.5f)
+        );
+    }
+
+    public Vector2 ClampToArena(Vector2 position)
+    {
+        Vector2 center = transform.position;
+        float halfWidth = arenaSize.x * 0.5f;
+        float halfHeight = arenaSize.y * 0.5f;
+
+        return new Vector2(
+            Mathf.Clamp(position.x, center.x - halfWidth, center.x + halfWidth),
+            Mathf.Clamp(position.y, center.y - halfHeight, center.y + halfHeight)
         );
     }
 
@@ -115,27 +145,27 @@ public class TrainingArenaManager : MonoBehaviour
             return;
         }
 
-        if (disablePlayerInputOnPlay)
+        PlayerController playerController = player.GetComponent<PlayerController>();
+        if (playerController != null)
         {
-            PlayerController playerController = player.GetComponent<PlayerController>();
-            if (playerController != null)
-            {
-                playerController.enabled = false;
-            }
-
-            if (forcePlayerIdleAnimation)
-            {
-                ForcePlayerIdleAnimation();
-            }
+            playerController.enabled = !disablePlayerInputOnPlay;
         }
 
-        if (disablePlayerBotOnPlay)
+        if (disablePlayerInputOnPlay && forcePlayerIdleAnimation)
         {
-            TrainingPlayerBot playerBot = player.GetComponent<TrainingPlayerBot>();
-            if (playerBot != null)
-            {
-                playerBot.enabled = false;
-            }
+            ForcePlayerIdleAnimation();
+        }
+
+        TrainingPlayerBot playerBot = player.GetComponent<TrainingPlayerBot>();
+        if (!disablePlayerBotOnPlay && playerBot == null)
+        {
+            playerBot = player.gameObject.AddComponent<TrainingPlayerBot>();
+        }
+
+        if (playerBot != null)
+        {
+            playerBot.Configure(enemy, playerRigidbody, player.GetComponentInChildren<TrainingHitbox>(true));
+            playerBot.enabled = !disablePlayerBotOnPlay;
         }
 
         if (disablePlayerWeaponOnPlay)

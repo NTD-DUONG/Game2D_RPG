@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 public class PlayerHealth : MonoBehaviour
 {
     public bool isDead {  get; private set; }
-    [SerializeField] private int maxHealth = 3;
+    [SerializeField] private int maxHealth = 5;
     [SerializeField] private float knockBackThrustAmount = 10f;
     [SerializeField] private float damageRecoveryTime = 1f;
 
@@ -32,6 +32,8 @@ public class PlayerHealth : MonoBehaviour
 
     private void Start()
     {
+        maxHealth = 5;
+        damageRecoveryTime = 1f;
         isDead = false;
         currentHealth = maxHealth;
         UpdateHealthSlider();

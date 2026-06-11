@@ -78,16 +78,30 @@ public class Projectile : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (GetComponent<TrainingProjectileDamage>() != null)
+        {
+            return;
+        }
+
         if (other.isTrigger)
         {
             return;
         }
 
         EnemyHealthy enemyHealth = other.gameObject.GetComponent<EnemyHealthy>();
-        PlayerHealth player= other.gameObject.GetComponent<PlayerHealth>();
+        TrainingHealth trainingHealth = other.GetComponentInParent<TrainingHealth>();
+        PlayerHealth player = other.gameObject.GetComponent<PlayerHealth>();
 
         if (isEnemyProjectile)
         {
+            if (trainingHealth != null)
+            {
+                trainingHealth.TakeDamage(1, gameObject);
+                SpawnHitVfx();
+                Destroy(gameObject);
+                return;
+            }
+
             if (player == null)
             {
                 return;
@@ -118,7 +132,7 @@ public class Projectile : MonoBehaviour
         transform.Translate(Vector3.right * Time.deltaTime * moveSpeed);
     }
 
-    private void SpawnHitVfx()
+    public void SpawnHitVfx()
     {
         if (particleOnHitPrefabVFX != null)
         {

@@ -825,9 +825,9 @@ MonoBehaviour:
   randomizeSpawn: 1
   minimumSpawnDistance: 2
   disablePlayerInputOnPlay: 0
-  disablePlayerWeaponOnPlay: 1
+  disablePlayerWeaponOnPlay: 0
   disablePlayerBotOnPlay: 1
-  forcePlayerIdleAnimation: 1
+  forcePlayerIdleAnimation: 0
 --- !u!4 &337937169
 Transform:
   m_ObjectHideFlags: 0
@@ -8958,8 +8958,9 @@ MonoBehaviour:
   targetHealth: {fileID: 2045303138}
   bulletPrefab: {fileID: 6963970299730924513, guid: 7a2839e688799a64f8a2c576c620565f, type: 3}
   firePoint: {fileID: 0}
+  projectileSpawnOffset: 0.7
   bulletMoveSpeed: 4
-  projectileRange: 10
+  projectileRange: 4.5
   damageAmount: 1
   spawnedProjectileScale: 1
   spawnedProjectileColor: {r: 0.1, g: 0.9, b: 1, a: 1}
@@ -9008,9 +9009,11 @@ MonoBehaviour:
   moveSpeed: 2.5
   acceleration: 18
   directionAcceleration: 12
-  attackRange: 5
-  attackCooldown: 0.8
+  attackRange: 4
+  attackCooldown: 1.2
   maxObservationDistance: 10
+  endEpisodeWhenPlayerDies: 1
+  requireClearShotForAttack: 0
   obstacleRayDistance: 3
   obstacleMask:
     serializedVersion: 2
@@ -9040,7 +9043,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_BrainParameters:
-    VectorObservationSize: 22
+    VectorObservationSize: 24
     NumStackedVectorObservations: 1
     m_ActionSpec:
       m_NumContinuousActions: 0
@@ -9071,6 +9074,13 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   maxHealth: 3
+  updateHealthSlider: 0
+  healthSliderName: Health Slider
+  playHitFlash: 1
+  playKnockback: 1
+  knockbackThrustAmount: 6
+  playDeathAnimation: 0
+  disableControlsOnDeath: 0
 --- !u!1 &1531114283
 GameObject:
   m_ObjectHideFlags: 0
@@ -13972,7 +13982,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee127e2da399b3547b695530827e25fe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 3
+  maxHealth: 5
   knockBackThrustAmount: 10
   damageRecoveryTime: 1
 --- !u!114 &2045303138
@@ -13987,7 +13997,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c969e0c3b9ded8d4297d3946614ddc7d, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  maxHealth: 3
+  maxHealth: 5
+  updateHealthSlider: 1
+  healthSliderName: Health Slider
+  playHitFlash: 1
+  playKnockback: 1
+  knockbackThrustAmount: 10
+  playDeathAnimation: 1
+  disableControlsOnDeath: 1
 --- !u!4 &2058417683 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 6893365486855859130, guid: f42bd88987d9a8240bc1c38fc234dfa4, type: 3}

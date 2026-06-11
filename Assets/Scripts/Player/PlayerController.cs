@@ -17,6 +17,8 @@ public class PlayerController : Singleton<PlayerController>
     private Animator myAnimator;
     private SpriteRenderer mySpriteRender;
     private Knockback knockback;
+    private PlayerHealth playerHealth;
+    private TrainingHealth trainingHealth;
     private float startingMoveSpeed;
 
     private bool facingLeft = false;
@@ -35,6 +37,8 @@ public class PlayerController : Singleton<PlayerController>
         myAnimator = GetComponent<Animator>();
         mySpriteRender = GetComponent<SpriteRenderer>();
         knockback = GetComponent<Knockback>();
+        playerHealth = GetComponent<PlayerHealth>();
+        trainingHealth = GetComponent<TrainingHealth>();
 
         if (rb != null)
         {
@@ -87,6 +91,14 @@ public class PlayerController : Singleton<PlayerController>
             return;
         }
 
+        if (IsDead())
+        {
+            movement = Vector2.zero;
+            myAnimator.SetFloat(moveXHash, 0);
+            myAnimator.SetFloat(moveYHash, 0);
+            return;
+        }
+
         movement = playerControls.Movement.Move.ReadValue<Vector2>();
 
         myAnimator.SetFloat(moveXHash, movement.x);
@@ -95,7 +107,7 @@ public class PlayerController : Singleton<PlayerController>
 
     private void Move()
     {
-        if (rb == null || knockback != null && knockback.GettingKnockedBack ) { return; }
+        if (rb == null || IsDead() || knockback != null && knockback.GettingKnockedBack ) { return; }
         rb.MovePosition(rb.position + movement * (moveSpeed * Time.fixedDeltaTime));
     }
 
@@ -123,6 +135,7 @@ public class PlayerController : Singleton<PlayerController>
     }
     private void Dash()
     {
+        if (IsDead()) return;
         if (!isDashing)
         {
             isDashing = true;
@@ -130,6 +143,12 @@ public class PlayerController : Singleton<PlayerController>
             myTrailRenderer.emitting = true;
             StartCoroutine(EndDashRoutine());
         }
+    }
+
+    private bool IsDead()
+    {
+        return playerHealth != null && playerHealth.isDead
+            || trainingHealth != null && trainingHealth.IsDead;
     }
     private IEnumerator EndDashRoutine()
     {

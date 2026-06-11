@@ -10,7 +10,7 @@ public class TrainingRangedAttack : MonoBehaviour
     [SerializeField] private Transform firePoint;
     [SerializeField] private float projectileSpawnOffset = 0.7f;
     [SerializeField] private float bulletMoveSpeed = 4f;
-    [SerializeField] private float projectileRange = 10f;
+    [SerializeField] private float projectileRange = 4.5f;
     [SerializeField] private int damageAmount = 1;
     [Header("Projectile Visual")]
     [SerializeField] private float spawnedProjectileScale = 1f;
@@ -25,6 +25,7 @@ public class TrainingRangedAttack : MonoBehaviour
 
     private void Awake()
     {
+        damageAmount = 1;
         if (ownerHealth == null)
         {
             ownerHealth = GetComponent<TrainingHealth>();

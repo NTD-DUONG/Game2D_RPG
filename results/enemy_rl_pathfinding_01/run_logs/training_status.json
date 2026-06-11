@@ -1,0 +1,56 @@
+{
+    "EnemyTraining": {
+        "checkpoints": [
+            {
+                "steps": 1728,
+                "file_path": "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-1728.onnx",
+                "reward": null,
+                "creation_time": 1781081422.6441565,
+                "auxillary_file_paths": [
+                    "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-1728.pt"
+                ]
+            },
+            {
+                "steps": 3900,
+                "file_path": "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-3900.onnx",
+                "reward": -0.9275997191667557,
+                "creation_time": 1781081880.76496,
+                "auxillary_file_paths": [
+                    "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-3900.pt"
+                ]
+            },
+            {
+                "steps": 10721,
+                "file_path": "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-10721.onnx",
+                "reward": -0.08106227032840252,
+                "creation_time": 1781082484.434928,
+                "auxillary_file_paths": [
+                    "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-10721.pt"
+                ]
+            },
+            {
+                "steps": 100233,
+                "file_path": "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-100233.onnx",
+                "reward": -7.074699720740318,
+                "creation_time": 1781084042.8803084,
+                "auxillary_file_paths": [
+                    "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-100233.pt"
+                ]
+            }
+        ],
+        "final_checkpoint": {
+            "steps": 100233,
+            "file_path": "results\\enemy_rl_pathfinding_01\\EnemyTraining.onnx",
+            "reward": -7.074699720740318,
+            "creation_time": 1781084042.8803084,
+            "auxillary_file_paths": [
+                "results\\enemy_rl_pathfinding_01\\EnemyTraining\\EnemyTraining-100233.pt"
+            ]
+        }
+    },
+    "metadata": {
+        "stats_format_version": "0.3.0",
+        "mlagents_version": "1.1.0",
+        "torch_version": "2.1.1+cpu"
+    }
+}

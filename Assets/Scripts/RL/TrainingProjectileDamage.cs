@@ -85,6 +85,12 @@ public class TrainingProjectileDamage : MonoBehaviour
 
         hitSomething = true;
         hitHealth.TakeDamage(damageAmount, ownerHealth != null ? ownerHealth.gameObject : gameObject);
+        Projectile projectile = GetComponent<Projectile>();
+        if (projectile != null)
+        {
+            projectile.SpawnHitVfx();
+        }
+
         hitCallback?.Invoke(hitHealth);
         Destroy(gameObject);
     }

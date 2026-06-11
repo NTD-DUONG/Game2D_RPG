@@ -8,6 +8,11 @@ public class AreaExit : MonoBehaviour
 
     private void OnTriggerEnter2D(Collider2D other)
     {
+        if (FindFirstObjectByType<TrainingArenaManager>() != null)
+        {
+            return;
+        }
+
         if (other.gameObject.GetComponent<PlayerController>())
         {
             SceneManager.LoadScene(sceneToLoad);
