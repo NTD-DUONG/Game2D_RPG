@@ -210,6 +210,12 @@ public class EnemyTrainingAgent : Agent
     public override void Heuristic(in ActionBuffers actionsOut)
     {
         ActionSegment<int> discreteActions = actionsOut.DiscreteActions;
+        if (player == null)
+        {
+            discreteActions[0] = 0;
+            return;
+        }
+
         Vector2 toPlayer = player.position - transform.position;
 
         float distanceToPlayer = toPlayer.magnitude;
